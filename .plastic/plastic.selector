@@ -1,0 +1,4 @@
+repository "proyek_game_jam_gimersia/proyek_game_jam_gimersia@20067084963861@cloud"
+  path "/"
+    br "/main"
+    co "/main"
