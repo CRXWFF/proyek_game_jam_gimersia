@@ -1,42 +1,34 @@
 using System;
-using UnityEngine;
 
 [Serializable]
 public struct CardModel
 {
-    [Range(2, 14)]
-    public int rank; // 2-10, J=11, Q=12, K=13, A=14
-    public Suit suit;
+    public string text;     // 1-3 huruf
+    public int basePoints;  // otomatis dari panjang
+    public PowerType power;
 
-    public CardModel(int rank, Suit suit)
+    public enum PowerType { None = 0, WordCharm = 1, LexiconVault = 2, GrandVerse = 3, FreshMuse = 4 }
+
+    public CardModel(string rawText)
     {
-        this.rank = rank;
-        this.suit = suit;
+        text = (rawText ?? "").Trim().ToUpperInvariant();
+        int len = text.Length;
+        power = PowerType.None;
+
+        if (len <= 0) basePoints = 0;
+        else if (len == 1) basePoints = 2;
+        else if (len == 2) basePoints = 4;
+        else basePoints = 6; // 3+ huruf = 6 poin
     }
 
-    public override string ToString()
+    public CardModel(PowerType p)
     {
-        return $"{RankToString(rank)} of {suit}";
+        power = p;
+        text = p.ToString().ToUpperInvariant();
+        basePoints = 0;
     }
 
-    public static string RankToString(int r)
-    {
-        return r switch
-        {
-            <= 10 => r.ToString(),
-            11 => "J",
-            12 => "Q",
-            13 => "K",
-            14 => "A",
-            _ => "?"
-        };
-    }
-}
+    public bool IsPower => power != PowerType.None;
 
-public enum Suit
-{
-    Clubs,
-    Diamonds,
-    Hearts,
-    Spades
+    public override string ToString() => text;
 }

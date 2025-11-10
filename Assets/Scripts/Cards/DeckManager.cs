@@ -6,8 +6,12 @@ public class DeckManager : MonoBehaviour
 {
     public static DeckManager Instance { get; private set; }
 
-    [Header("Debug")]
-    [SerializeField] private bool autoBuildOnStart = true;
+    [Header("Kartu yang tersedia")]
+    [Tooltip("Daftar teks kartu, misal: KA, A, RAN, dll (sesuai desain Kakartu Sekata)")]
+    public List<string> cardDefinitions = new List<string> { "KA", "A", "RAN" };
+
+    [Tooltip("Berapa kopi tiap kartu dimasukkan ke deck")]
+    public int copiesPerDefinition = 4;
 
     private Stack<CardModel> deck = new Stack<CardModel>();
 
@@ -18,24 +22,21 @@ public class DeckManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-
         Instance = this;
-
-        if (autoBuildOnStart)
-        {
-            BuildAndShuffle();
-        }
+        BuildAndShuffle();
     }
 
     public void BuildAndShuffle()
     {
         var list = new List<CardModel>();
 
-        foreach (Suit s in Enum.GetValues(typeof(Suit)))
+        foreach (var def in cardDefinitions)
         {
-            for (int rank = 2; rank <= 14; rank++)
+            if (string.IsNullOrWhiteSpace(def)) continue;
+
+            for (int i = 0; i < copiesPerDefinition; i++)
             {
-                list.Add(new CardModel(rank, s));
+                list.Add(new CardModel(def));
             }
         }
 
@@ -48,9 +49,7 @@ public class DeckManager : MonoBehaviour
 
         deck.Clear();
         foreach (var c in list)
-        {
             deck.Push(c);
-        }
     }
 
     public bool HasCards => deck.Count > 0;
@@ -62,6 +61,4 @@ public class DeckManager : MonoBehaviour
 
         return deck.Pop();
     }
-
-    public int Count => deck.Count;
 }
