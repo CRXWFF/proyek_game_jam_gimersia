@@ -16,7 +16,26 @@ public class PlayAreaSlot : MonoBehaviour, IDropHandler
 
         // slot harus bisa kena raycast
         var img = GetComponent<Image>();
-        if (img != null) img.raycastTarget = true;
+        if (img != null)
+        {
+            img.raycastTarget = true;
+            // make sure image is visible at runtime
+            img.enabled = true;
+            var c = img.color;
+            c.a = 1f;
+            img.color = c;
+        }
+
+        // ensure transform scale is correct
+        if (transform.localScale == Vector3.zero)
+            transform.localScale = Vector3.one;
+
+        Debug.Log($"PlayAreaSlot Awake: {name} (manager={(manager != null ? manager.name : "null")})");
+    }
+
+    private void OnEnable()
+    {
+        Debug.Log($"PlayAreaSlot Enabled: {name}");
     }
 
     public void OnDrop(PointerEventData eventData)
