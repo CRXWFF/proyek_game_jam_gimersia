@@ -1,94 +1,99 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using DG.Tweening;
 
 public class HandManager : MonoBehaviour
 {
-    [Header("References")]
     public DeckManager deck;
+    public PlayAreaManager playArea;
     public CardView cardPrefab;
     public Transform handArea;
-    public Transform deckVisualPoint;
+    public int handSize = 5;
 
-    [Header("Config")]
-    public int handSize = 8;
-    public Sprite[] cardSprites; // 52 sprite kartu (4 suit x 13 rank)
+    public List<CardView> HandCards { get; private set; } = new List<CardView>();
 
-    public List<CardView> Cards { get; private set; } = new List<CardView>();
-
-    void Awake()
+    private void Awake()
     {
-        if (deck == null)
-            deck = DeckManager.Instance;
+        if (deck == null) deck = DeckManager.Instance;
     }
 
     public void InitializeHand()
     {
-        ResetHand();
-        RefillHand();
+        ClearHand();
+
+        for (int i = 0; i < handSize; i++)
+            DrawCardToHand();
     }
 
-    public void RefillHand()
+    public void DrawCardToHand()
     {
         if (deck == null) deck = DeckManager.Instance;
-        if (deck == null)
-        {
-            Debug.LogError("HandManager: DeckManager not assigned.");
-            return;
-        }
+        if (deck == null) return;
 
-        while (Cards.Count < handSize)
-        {
-            var model = deck.Draw();
-            var card = Instantiate(cardPrefab, handArea);
+        var model = deck.Draw();
 
-            var sprite = GetSpriteFor(model);
-            card.Setup(model, sprite);
+        var card = Instantiate(cardPrefab, handArea);
+        card.transform.localScale = Vector3.one;
 
-            Cards.Add(card);
+        card.handManager = this;
+        card.playAreaManager = playArea;
+        card.currentSlot = null;
+        card.CurrentArea = CardView.CardArea.Hand;
+        card.Setup(model);
 
-            if (deckVisualPoint != null)
-                card.DealFrom(deckVisualPoint.position);
-        }
+        HandCards.Add(card);
     }
 
-    public List<CardView> GetSelectedCards()
+    public void RemoveFromHand(CardView card)
     {
-        return Cards.Where(c => c != null && c.IsSelected).ToList();
+        HandCards.Remove(card);
     }
 
-    public void RemoveCards(IEnumerable<CardView> toRemove)
+    public void ReturnCardToHand(CardView card)
     {
-        foreach (var c in toRemove.ToList())
+        if (card == null) return;
+
+        if (playArea != null)
+            playArea.RemoveCardReference(card);
+
+        card.currentSlot = null;
+        card.CurrentArea = CardView.CardArea.Hand;
+
+        if (!HandCards.Contains(card))
+            HandCards.Add(card);
+
+        card.transform.SetParent(handArea, false);
+        card.transform.DOKill();
+        card.transform.localScale = Vector3.one;
+    }
+
+    public void ReplacePlayedCards(List<CardView> played)
+    {
+        int count = played.Count;
+
+        foreach (var c in played)
         {
-            Cards.Remove(c);
+            if (c == null) continue;
+
+            HandCards.Remove(c);
+            if (playArea != null)
+                playArea.RemoveCardReference(c);
+
+            Destroy(c.gameObject);
+        }
+
+        for (int i = 0; i < count; i++)
+            DrawCardToHand();
+    }
+
+    public void ClearHand()
+    {
+        foreach (var c in HandCards)
+        {
             if (c != null)
                 Destroy(c.gameObject);
         }
-    }
 
-    public void ResetHand()
-    {
-        foreach (var c in Cards)
-        {
-            if (c != null)
-                Destroy(c.gameObject);
-        }
-        Cards.Clear();
-    }
-
-    Sprite GetSpriteFor(CardModel m)
-    {
-        if (cardSprites == null || cardSprites.Length < 52)
-            return null;
-
-        int suitIndex = (int)m.suit;      // 0-3
-        int rankIndex = m.rank - 2;       // 0-12
-        int index = suitIndex * 13 + rankIndex;
-
-        if (index < 0 || index >= cardSprites.Length)
-            return null;
-
-        return cardSprites[index];
+        HandCards.Clear();
     }
 }

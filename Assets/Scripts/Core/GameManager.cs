@@ -1,150 +1,169 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 
 public class GameManager : MonoBehaviour
 {
     [Header("References")]
+    public DeckManager deckManager;
     public HandManager handManager;
+    public PlayAreaManager playArea;
     public UIHUD ui;
-    public ScorePopup scorePopupPrefab;
-    public Transform scorePopupParent;
 
     [Header("Config")]
-    public int targetScore = 300;
-    public int handsPerRound = 8;
-    public int discardsPerRound = 3;
+    public int targetScore = 200;
 
     int currentScore;
-    int handsLeft;
-    int discardsLeft;
-    bool isGameOver;
+    int extraAssemblesThisRound = 0;
+
+    public static GameManager Instance { get; private set; }
 
     [System.Obsolete]
-    void Start()
+    private void Start()
     {
-        StartNewRound();
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        Instance = this;
+
+        if (deckManager == null) deckManager = DeckManager.Instance;
+        if (handManager == null) handManager = FindObjectOfType<HandManager>();
+        if (playArea == null) playArea = FindObjectOfType<PlayAreaManager>();
+        if (ui == null) ui = FindObjectOfType<UIHUD>();
+
+        StartLevel();
     }
 
-    [System.Obsolete]
-    public void StartNewRound()
+    public void AddExtraAssembles(int n)
     {
-        isGameOver = false;
+        extraAssemblesThisRound += n;
+        Debug.Log($"Extra assembles added: {n}. Total this round: {extraAssemblesThisRound}");
+    }
 
+    public void StartLevel()
+    {
         currentScore = 0;
-        handsLeft = handsPerRound;
-        discardsLeft = discardsPerRound;
 
-        if (handManager == null)
-            handManager = FindObjectOfType<HandManager>();
+        if (deckManager != null)
+            deckManager.BuildAndShuffle();
 
-        if (handManager == null)
+        if (playArea != null)
+            playArea.ClearSlotsOnly();
+
+        if (handManager != null)
         {
-            Debug.LogError("GameManager: HandManager belum di-assign.");
-            return;
+            handManager.deck = deckManager;
+            handManager.playArea = playArea;
+            handManager.InitializeHand();
         }
 
-        if (DeckManager.Instance == null)
-        {
-            Debug.LogError("GameManager: DeckManager tidak ditemukan di scene.");
-            return;
-        }
-
-        DeckManager.Instance.BuildAndShuffle();
-        handManager.InitializeHand();
-
-        UpdateHUD("Mulai round baru.");
+        UpdateUI("Susun kartu di area tengah untuk membentuk kata.");
     }
 
     public void OnPlayHandButton()
     {
-        if (isGameOver) return;
-        if (handsLeft <= 0)
+        var cards = playArea.GetPlayedCardsInOrder();
+        if (cards.Count == 0)
         {
-            UpdateHUD("Tidak ada hand tersisa.");
+            UpdateUI("Belum ada kartu di area susun.");
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             return;
         }
 
-        var selected = handManager.GetSelectedCards();
-        if (selected.Count != 5)
+        // bentuk kata
+        string word = string.Concat(cards.Select(c => c.Model.text));
+        int cardPoints = cards.Sum(c => c.Model.basePoints);
+
+        bool isWord = WordValidator.Instance != null && WordValidator.Instance.IsValid(word);
+
+        int gain;
+        string msg;
+
+        if (!isWord)
         {
-            UpdateHUD("Pilih tepat 5 kartu untuk dimainkan.");
-            return;
+            gain = cardPoints;
+            msg = $"{word} bukan kata valid. Skor: {gain} (dari poin kartu).";
+        }
+        else
+        {
+            int n = cards.Count;
+            int baseForm = 0;
+            int mult = 1;
+
+            switch (n)
+            {
+                case 2: baseForm = 20; mult = 2; break;
+                case 3: baseForm = 40; mult = 3; break;
+                case 4: baseForm = 60; mult = 4; break;
+                case 5: baseForm = 80; mult = 5; break;
+            }
+
+            int combo = baseForm * mult;
+            gain = cardPoints + combo;
+            // check for special multipliers armed in special area
+            int powerMult = 1;
+            if (SpecialAreaManager.Instance != null)
+            {
+                powerMult = SpecialAreaManager.Instance.TryConsumeMultiplierForCount(n);
+            }
+
+            gain = gain * powerMult;
+            msg = $"{word} adalah kata! Kartu: {cardPoints} + Kombo: {baseForm} x{mult}";
+            if (powerMult != 1) msg += $" + Power x{powerMult}";
+            msg += $" = {gain}";
         }
 
-        var models = selected.Select(c => c.Model).ToList();
-        var (rank, score) = PokerHandEvaluator.Evaluate(models);
+        currentScore += gain;
 
-        handsLeft--;
-        currentScore += score;
+        handManager.ReplacePlayedCards(cards);
+        playArea.ClearSlotsOnly();
 
-        // hapus kartu yang dimainkan, refill
-        handManager.RemoveCards(selected);
-        handManager.RefillHand();
+        msg += $"\nTotal Score: {currentScore}";
 
-        string msg = $"{rank} (+{score})";
-        ShowScorePopup(msg);
-
-        // cek kondisi
         if (currentScore >= targetScore)
-        {
-            msg += "\nRound Clear!";
-            isGameOver = true;
-        }
-        else if (handsLeft <= 0)
-        {
-            msg += "\nGame Over";
-            isGameOver = true;
-        }
+            msg += "\nTarget tercapai! (placeholder kemenangan).";
 
-        UpdateHUD(msg);
+        UpdateUI(msg);
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     public void OnDiscardButton()
     {
-        if (isGameOver) return;
-
-        if (discardsLeft <= 0)
+        var cards = playArea.GetPlayedCardsInOrder();
+        if (cards.Count == 0)
         {
-            UpdateHUD("Discard sudah habis.");
+            UpdateUI("Tidak ada kartu di area susun untuk dibuang.");
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
             return;
         }
 
-        var selected = handManager.GetSelectedCards();
-        if (selected.Count == 0)
-        {
-            UpdateHUD("Pilih kartu yang ingin di-discard.");
-            return;
-        }
+        handManager.ReplacePlayedCards(cards);
+        playArea.ClearSlotsOnly();
 
-        discardsLeft--;
-
-        handManager.RemoveCards(selected);
-        handManager.RefillHand();
-
-        UpdateHUD($"Discard {selected.Count} kartu.");
+        UpdateUI("Kartu di area susun dibuang dan diganti.");
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
-    void UpdateHUD(string lastHandMessage)
+    void UpdateUI(string msg)
     {
         if (ui != null)
         {
             ui.SetScore(currentScore);
-            ui.SetHands(handsLeft);
-            ui.SetDiscards(discardsLeft);
             ui.SetTarget(targetScore);
-            ui.SetLastHand(lastHandMessage);
+            ui.SetLastHand(msg);
         }
         else
         {
-            Debug.Log(lastHandMessage);
+            Debug.Log(msg);
         }
     }
 
-    void ShowScorePopup(string text)
+    public void HomeScreenButton()
     {
-        if (scorePopupPrefab == null || scorePopupParent == null) return;
-
-        var popup = Instantiate(scorePopupPrefab, scorePopupParent);
-        popup.Show(text);
+        SceneManager.LoadScene("HomeScreen");
     }
 }
