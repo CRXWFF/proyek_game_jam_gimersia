@@ -20,6 +20,9 @@ public class SpecialAreaManager : MonoBehaviour
     [Header("Generation")]
     public int minSpecial = 1;
     public int maxSpecial = 3;
+    // if true, the special area will be populated with random specials at Start()
+    // default false so player sees no special cards until they are purchased
+    public bool spawnRandomOnStart = false;
 
     List<CardView> specialCards = new List<CardView>();
     List<CardView> armedPowers = new List<CardView>();
@@ -35,7 +38,11 @@ public class SpecialAreaManager : MonoBehaviour
     private void Start()
     {
         AutoCollectSlots();
-        GenerateRandomSpecials();
+        // Only generate random specials at start when explicitly enabled.
+        // By default this is false so the special area remains empty until
+        // the player purchases cards from the shop (AddSpecificPower).
+        if (spawnRandomOnStart)
+            GenerateRandomSpecials();
     }
 
     void AutoCollectSlots()
@@ -108,6 +115,39 @@ public class SpecialAreaManager : MonoBehaviour
             specialCards.Add(v);
             cardSlotMap[v] = slot;
         }
+    }
+
+    // Add a specific power card into the first free slot. Returns true if added.
+    public bool AddSpecificPower(CardModel.PowerType power)
+    {
+        if (cardPrefab == null || specialAreaParent == null) return false;
+
+        AutoCollectSlots();
+
+        // find first empty slot
+        Transform slot = null;
+        foreach (var s in slotTransforms)
+        {
+            bool used = false;
+            foreach (var kv in cardSlotMap)
+            {
+                if (kv.Value == s) { used = true; break; }
+            }
+            if (!used) { slot = s; break; }
+        }
+
+        if (slot == null) return false;
+
+        var model = new CardModel(power);
+        var v = Instantiate(cardPrefab, slot);
+        v.Setup(model);
+        v.CurrentArea = CardView.CardArea.Hand;
+        v.transform.localPosition = Vector3.zero;
+        v.transform.localScale = Vector3.one;
+
+        specialCards.Add(v);
+        cardSlotMap[v] = slot;
+        return true;
     }
 
     public void OnSpecialCardClicked(CardView card)

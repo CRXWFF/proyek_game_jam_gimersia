@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using TMPro;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using UnityEngine.SocialPlatforms.Impl;
@@ -14,13 +15,13 @@ public class GameManager : MonoBehaviour
     public UIHUD ui;
 
     [Header("Config")]
-    public int targetScore = 200;
-    public int maxDiscards = 3;
+    public int targetScore;
+    public int maxDiscards;
     public int discardsLeft;
     public string wordCreated;
     public int basePoint;
     public int baseMult;
-    public int maxAssembles = 4;
+    public int maxAssembles;
     public int assembleLeft;
 
     int currentScore;
@@ -28,6 +29,19 @@ public class GameManager : MonoBehaviour
     private float nextUpdateTime;
 
     public static GameManager Instance { get; private set; }
+
+    [Header("Result Popup")]
+    public GameObject resultPopup;
+    public GameObject overlay;
+    public TMP_Text RemainingAssembleValue;
+    public TMP_Text EarnedThisRoundValue;
+    public TMP_Text CoinText;
+
+    int lastGain = 0;
+    int playerCoins = 0;
+
+    public int PlayerCoins => playerCoins;
+
 
     [System.Obsolete]
     private void Start()
@@ -79,6 +93,11 @@ public class GameManager : MonoBehaviour
         }
         discardsLeft = maxDiscards;
         assembleLeft = maxAssembles;
+
+        // initialize player coins (could be loaded from player profile later)
+        playerCoins = 0;
+        if (CoinText != null)
+            CoinText.text = "$" + playerCoins.ToString();
 
         UpdateUI("Susun kartu di area tengah untuk membentuk kata.");
     }
@@ -142,6 +161,9 @@ public class GameManager : MonoBehaviour
 
         currentScore += gain;
 
+        // store last gain for result popup
+        lastGain = gain;
+
         assembleLeft -= 1;
         handManager.ReplacePlayedCards(cards);
         playArea.ClearSlotsOnly();
@@ -153,7 +175,11 @@ public class GameManager : MonoBehaviour
         msg += $"\nTotal Score: {currentScore}";
 
         if (currentScore >= targetScore)
+        {
             msg += "\nTarget tercapai! (placeholder kemenangan).";
+            // show result popup only when target reached and not game over
+            ShowResultPopup();
+        }
 
         UpdateUI(msg);
         if (EventSystem.current != null)
@@ -203,6 +229,80 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    // Show result popup and overlay when target is reached
+    void ShowResultPopup()
+    {
+        if (resultPopup == null)
+        {
+            Debug.LogWarning("ResultPopup is not assigned in GameManager.");
+            return;
+        }
+
+        // don't show multiple times
+        if (resultPopup.activeSelf) return;
+
+        // set overlay active if available
+        if (overlay == null)
+        {
+            overlay = GameObject.Find("overlay") ?? GameObject.Find("Overlay");
+        }
+
+        if (overlay != null)
+            overlay.SetActive(true);
+
+        // update texts
+        if (RemainingAssembleValue != null)
+            RemainingAssembleValue.text = "$" + assembleLeft.ToString();
+
+        if (EarnedThisRoundValue != null)
+            EarnedThisRoundValue.text = "$" + lastGain.ToString();
+
+        // calculate coin gain as RemainingAssembleValue + EarnedThisRoundValue and add to player's coins
+        if (CoinText != null)
+        {
+            int remaining = assembleLeft;
+            int earned = lastGain;
+            int coinGain = remaining + earned;
+            // Add the gained coins to the player's coin total so CoinText reflects actual owned coins
+            ModifyPlayerCoins(coinGain);
+        }
+
+        resultPopup.SetActive(true);
+    }
+
+    // Close result popup and overlay
+    public void CloseResultPopup()
+    {
+        if (resultPopup != null)
+            resultPopup.SetActive(false);
+
+        if (overlay != null)
+            overlay.SetActive(false);
+    }
+
+    // Called from ResultPopUp Collect button
+    public void OnCollectFromResult()
+    {
+        // close result popup
+        CloseResultPopup();
+
+        // open shop
+        if (ShopManager.Instance != null)
+        {
+            ShopManager.Instance.OpenShop();
+            // keep overlay active
+            if (overlay != null)
+                overlay.SetActive(true);
+        }
+    }
+
+    public void ModifyPlayerCoins(int delta)
+    {
+        playerCoins += delta;
+        if (CoinText != null)
+            CoinText.text = "$" + playerCoins.ToString();
+    }
+
     public void HomeScreenButton()
     {
         SceneManager.LoadScene("HomeScreen");
@@ -212,7 +312,7 @@ public class GameManager : MonoBehaviour
     {
         if (Time.time < nextUpdateTime) return;
         nextUpdateTime = Time.time + 0.1f;
-    
+
         var cards = playArea.GetPlayedCardsInOrder();
 
         if (cards.Count == 0)

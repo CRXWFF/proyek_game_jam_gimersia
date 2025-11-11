@@ -40,6 +40,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
     [HideInInspector] public UnityEvent<Card> EndDragEvent;
     [HideInInspector] public UnityEvent<Card, bool> SelectEvent;
 
+    [System.Obsolete]
     void Start()
     {
         canvas = GetComponentInParent<Canvas>();
@@ -89,7 +90,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     public void OnDrag(PointerEventData eventData)
     {
-        
+
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -184,7 +185,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     private void OnDestroy()
     {
-        if(cardVisual != null)
-        Destroy(cardVisual.gameObject);
+        if (cardVisual != null)
+            Destroy(cardVisual.gameObject);
     }
 }

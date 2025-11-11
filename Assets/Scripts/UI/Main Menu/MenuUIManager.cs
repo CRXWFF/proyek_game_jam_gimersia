@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class MenuUIManager : MonoBehaviour
 {
-[Header("Panels")]
+    [Header("Panels")]
     public GameObject overlay;
     public GameObject optionsMenu;
     public GameObject settingsMenu;
@@ -53,5 +53,12 @@ public class MenuUIManager : MonoBehaviour
     public void QuitGame()
     {
         Application.Quit();
+    }
+
+    // === PLAY ===
+    public void PlayGame()
+    {
+        // load the main game scene
+        UnityEngine.SceneManagement.SceneManager.LoadScene("Level_1");
     }
 }
