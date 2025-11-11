@@ -10,6 +10,10 @@ public class DeckManager : MonoBehaviour
     [Tooltip("Daftar teks kartu, misal: KA, A, RAN, dll (sesuai desain Kakartu Sekata)")]
     public List<string> cardDefinitions = new List<string> { "KA", "A", "RAN" };
 
+    [Header("Auto Populate")]
+    [Tooltip("If true, card definitions will be populated at runtime from WordValidator's syllable arrays when available.")]
+    public bool autoPopulateDefinitions = true;
+
     [Tooltip("Berapa kopi tiap kartu dimasukkan ke deck")]
     public int copiesPerDefinition = 4;
 
@@ -23,6 +27,7 @@ public class DeckManager : MonoBehaviour
             return;
         }
         Instance = this;
+        // Build the deck on Awake. BuildAndShuffle will attempt to use WordValidator if autoPopulateDefinitions is true.
         BuildAndShuffle();
     }
 
@@ -30,7 +35,40 @@ public class DeckManager : MonoBehaviour
     {
         var list = new List<CardModel>();
 
-        foreach (var def in cardDefinitions)
+        IEnumerable<string> definitionsToUse = cardDefinitions;
+
+        if (autoPopulateDefinitions)
+        {
+            // Try to get WordValidator instance; if not set yet, try FindObjectOfType as a fallback
+            // Try the singleton first, otherwise attempt to find any instance in the scene.
+            var validator = WordValidator.Instance ?? UnityEngine.Object.FindAnyObjectByType<WordValidator>();
+            if (validator != null)
+            {
+                var combined = new List<string>();
+                if (validator.oneLetterSyllables != null) combined.AddRange(validator.oneLetterSyllables);
+                if (validator.twoLetterSyllables != null) combined.AddRange(validator.twoLetterSyllables);
+                if (validator.threeLetterSyllables != null) combined.AddRange(validator.threeLetterSyllables);
+
+                // normalize and remove duplicates
+                var normalized = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+                var finalList = new List<string>();
+                foreach (var s in combined)
+                {
+                    if (string.IsNullOrWhiteSpace(s)) continue;
+                    var t = s.Trim().ToUpperInvariant();
+                    if (!normalized.Contains(t))
+                    {
+                        normalized.Add(t);
+                        finalList.Add(t);
+                    }
+                }
+
+                if (finalList.Count > 0)
+                    definitionsToUse = finalList;
+            }
+        }
+
+        foreach (var def in definitionsToUse)
         {
             if (string.IsNullOrWhiteSpace(def)) continue;
 

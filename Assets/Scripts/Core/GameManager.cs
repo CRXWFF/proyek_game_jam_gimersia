@@ -36,6 +36,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text RemainingAssembleValue;
     public TMP_Text EarnedThisRoundValue;
     public TMP_Text CoinText;
+    [Header("Game Over")]
+    public GameObject gameOverPopup;
 
     int lastGain = 0;
     int playerCoins = 0;
@@ -62,11 +64,43 @@ public class GameManager : MonoBehaviour
 
         if (assembleLeft == 0 && currentScore < targetScore)
         {
-            UpdateUI("Game Over");
-            if (EventSystem.current != null)
-                EventSystem.current.SetSelectedGameObject(null);
+            // show game over popup once when conditions met
+            ShowGameOverPopup();
             return;
         }
+    }
+
+    void ShowGameOverPopup()
+    {
+        // update UI message as well
+        UpdateUI("Game Over");
+
+        // ensure overlay exists
+        if (overlay == null)
+        {
+            overlay = GameObject.Find("overlay") ?? GameObject.Find("Overlay");
+        }
+
+        if (overlay != null)
+            overlay.SetActive(true);
+
+        if (gameOverPopup != null)
+        {
+            if (!gameOverPopup.activeSelf)
+                gameOverPopup.SetActive(true);
+        }
+
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
+    }
+
+    public void CloseGameOverPopup()
+    {
+        if (gameOverPopup != null)
+            gameOverPopup.SetActive(false);
+
+        if (overlay != null)
+            overlay.SetActive(false);
     }
 
     public void AddExtraAssembles(int n)

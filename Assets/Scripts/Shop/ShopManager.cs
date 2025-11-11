@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class ShopManager : MonoBehaviour
@@ -12,6 +13,10 @@ public class ShopManager : MonoBehaviour
     public GameObject shopPopup;
     // optional TMP in the shop popup that shows player's current coins (matches HUD CoinText)
     public TMP_Text shopCoinText;
+    [Header("Reroll")]
+    public Button rerollButton;
+    public TMP_Text rerollValueText;
+    public int rerollPrice = 5;
 
     [Header("Generation")]
     public int minItems = 1;
@@ -63,6 +68,40 @@ public class ShopManager : MonoBehaviour
         if (slots.Count > 0)
             count = Mathf.Min(count, slots.Count);
 
+        // set reroll UI value
+        if (rerollValueText != null)
+            rerollValueText.text = "$" + rerollPrice.ToString();
+
+        // attach reroll listener if button provided (safe to add multiple times as Unity will ignore duplicates)
+        if (rerollButton != null)
+        {
+            rerollButton.onClick.RemoveListener(OnRerollButtonClicked);
+            rerollButton.onClick.AddListener(OnRerollButtonClicked);
+        }
+
+        GenerateShopItems(slots, count, values);
+    }
+
+    public void ClearShop()
+    {
+        // destroy only spawned shop item gameObjects (do not destroy slot placeholders)
+        foreach (var g in spawned)
+        {
+            if (g != null) Destroy(g);
+        }
+        spawned.Clear();
+    }
+
+    public void CloseShop()
+    {
+        if (shopPopup != null)
+            shopPopup.SetActive(false);
+        ClearShop();
+    }
+
+    // Regenerate shop items using given slots and available power values
+    void GenerateShopItems(List<Transform> slots, int count, System.Array values)
+    {
         for (int i = 0; i < count; i++)
         {
             // pick random power (exclude None)
@@ -90,23 +129,8 @@ public class ShopManager : MonoBehaviour
 
             spawned.Add(go);
         }
-    }
-
-    public void ClearShop()
-    {
-        // destroy only spawned shop item gameObjects (do not destroy slot placeholders)
-        foreach (var g in spawned)
-        {
-            if (g != null) Destroy(g);
-        }
-        spawned.Clear();
-    }
-
-    public void CloseShop()
-    {
-        if (shopPopup != null)
-            shopPopup.SetActive(false);
-        ClearShop();
+        // update reroll button state based on player's coins
+        UpdateShopCoinDisplay();
     }
 
     int GetPriceForPower(CardModel.PowerType p)
@@ -139,6 +163,50 @@ public class ShopManager : MonoBehaviour
 
         // update shop coin display (GameManager.ModifyPlayerCoins already updated HUD)
         UpdateShopCoinDisplay();
+    }
+
+    // Called when the reroll button is clicked
+    public void OnRerollButtonClicked()
+    {
+        if (GameManager.Instance == null)
+        {
+            Debug.LogWarning("ShopManager: GameManager missing for reroll.");
+            return;
+        }
+
+        if (GameManager.Instance.PlayerCoins < rerollPrice)
+        {
+            Debug.Log("Not enough coins to reroll shop.");
+            return;
+        }
+
+        // charge player
+        GameManager.Instance.ModifyPlayerCoins(-rerollPrice);
+
+        // regenerate the shop with a new random count and items
+        ClearShop();
+
+        int count = Random.Range(minItems, maxItems + 1);
+        var values = System.Enum.GetValues(typeof(CardModel.PowerType));
+
+        List<Transform> slots = new List<Transform>();
+        for (int i = 0; i < cardShopContainer.childCount; i++)
+        {
+            var t = cardShopContainer.GetChild(i);
+            if (t == null) continue;
+            slots.Add(t);
+        }
+
+        if (slots.Count > 0)
+            count = Mathf.Min(count, slots.Count);
+
+        // update shop coin display and reroll UI
+        UpdateShopCoinDisplay();
+
+        if (rerollValueText != null)
+            rerollValueText.text = "$" + rerollPrice.ToString();
+
+        GenerateShopItems(slots, count, values);
     }
 
     void UpdateShopCoinDisplay()
