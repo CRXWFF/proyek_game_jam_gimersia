@@ -6,6 +6,9 @@ using UnityEngine.EventSystems;
 
 public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
 {
+    [Header("Card")]
+    private Vector3 rotationDelta;
+
     [Header("UI")]
     public TMP_Text centerText;
     public TMP_Text cornerTopLeft;
@@ -148,6 +151,8 @@ public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
         // Set posisi kartu sehingga pointer tetap berada pada titik relatif yang sama di kartu
         rectTransform.anchoredPosition = localPointer + pointerOffset;
 
+        // transform.eulerAngles = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y, Mathf.Clamp(rotationDelta.x, -60, 60));
+
         // sedikit debug jika drag tidak terasa responsif
         // Debug.Log($"OnDrag {name} anchored={rectTransform.anchoredPosition}");
     }
@@ -199,5 +204,9 @@ public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
         transform.DOKill();
         transform.DOMove(slot.transform.position, 0.15f).SetEase(Ease.OutCubic);
         transform.localScale = Vector3.one;
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.UpdateWordPreview();
+    
     }
 }

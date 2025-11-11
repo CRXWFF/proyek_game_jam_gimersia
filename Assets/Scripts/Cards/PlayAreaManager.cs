@@ -74,10 +74,15 @@ public class PlayAreaManager : MonoBehaviour
     public List<CardView> GetPlayedCardsInOrder()
     {
         var result = new List<CardView>();
+        int i = 0;
         foreach (var slot in slots)
         {
             if (slot != null && slot.currentCard != null)
+            {
+                Debug.Log($"Slot {i}: {slot.name} berisi {slot.currentCard.name}");
                 result.Add(slot.currentCard);
+            }
+            i++;
         }
         return result;
     }

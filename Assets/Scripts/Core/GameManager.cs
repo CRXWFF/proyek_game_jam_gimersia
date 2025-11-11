@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using UnityEngine.SocialPlatforms.Impl;
 
 public class GameManager : MonoBehaviour
 {
@@ -14,9 +15,17 @@ public class GameManager : MonoBehaviour
 
     [Header("Config")]
     public int targetScore = 200;
+    public int maxDiscards = 3;
+    public int discardsLeft;
+    public string wordCreated;
+    public int basePoint;
+    public int baseMult;
+    public int maxAssembles = 4;
+    public int assembleLeft;
 
     int currentScore;
     int extraAssemblesThisRound = 0;
+    private float nextUpdateTime;
 
     public static GameManager Instance { get; private set; }
 
@@ -32,6 +41,18 @@ public class GameManager : MonoBehaviour
         if (ui == null) ui = FindObjectOfType<UIHUD>();
 
         StartLevel();
+    }
+
+    private void Update()
+    {
+
+        if (assembleLeft == 0 && currentScore < targetScore)
+        {
+            UpdateUI("Game Over");
+            if (EventSystem.current != null)
+                EventSystem.current.SetSelectedGameObject(null);
+            return;
+        }
     }
 
     public void AddExtraAssembles(int n)
@@ -56,6 +77,8 @@ public class GameManager : MonoBehaviour
             handManager.playArea = playArea;
             handManager.InitializeHand();
         }
+        discardsLeft = maxDiscards;
+        assembleLeft = maxAssembles;
 
         UpdateUI("Susun kartu di area tengah untuk membentuk kata.");
     }
@@ -63,6 +86,7 @@ public class GameManager : MonoBehaviour
     public void OnPlayHandButton()
     {
         var cards = playArea.GetPlayedCardsInOrder();
+
         if (cards.Count == 0)
         {
             UpdateUI("Belum ada kartu di area susun.");
@@ -84,6 +108,7 @@ public class GameManager : MonoBehaviour
         {
             gain = cardPoints;
             msg = $"{word} bukan kata valid. Skor: {gain} (dari poin kartu).";
+            wordCreated = "Bukan Kata";
         }
         else
         {
@@ -93,6 +118,7 @@ public class GameManager : MonoBehaviour
 
             switch (n)
             {
+                case 1: baseForm = 10; mult = 1; break;
                 case 2: baseForm = 20; mult = 2; break;
                 case 3: baseForm = 40; mult = 3; break;
                 case 4: baseForm = 60; mult = 4; break;
@@ -116,8 +142,13 @@ public class GameManager : MonoBehaviour
 
         currentScore += gain;
 
+        assembleLeft -= 1;
         handManager.ReplacePlayedCards(cards);
         playArea.ClearSlotsOnly();
+
+        wordCreated = "";
+        basePoint = 0;
+        baseMult = 0;
 
         msg += $"\nTotal Score: {currentScore}";
 
@@ -132,7 +163,7 @@ public class GameManager : MonoBehaviour
     public void OnDiscardButton()
     {
         var cards = playArea.GetPlayedCardsInOrder();
-        if (cards.Count == 0)
+        if (cards.Count == 0 || discardsLeft == 0)
         {
             UpdateUI("Tidak ada kartu di area susun untuk dibuang.");
             if (EventSystem.current != null)
@@ -140,8 +171,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        discardsLeft -= 1;
         handManager.ReplacePlayedCards(cards);
         playArea.ClearSlotsOnly();
+
+        wordCreated = "";
+        basePoint = 0;
+        baseMult = 0;
 
         UpdateUI("Kartu di area susun dibuang dan diganti.");
         if (EventSystem.current != null)
@@ -154,6 +190,11 @@ public class GameManager : MonoBehaviour
         {
             ui.SetScore(currentScore);
             ui.SetTarget(targetScore);
+            ui.setword(wordCreated);
+            ui.SetDiscardsleft(discardsLeft);
+            ui.SetBasePoint(basePoint);
+            ui.SetBaseMult(baseMult);
+            ui.SetAssemblesLeft(assembleLeft);
             ui.SetLastHand(msg);
         }
         else
@@ -165,5 +206,52 @@ public class GameManager : MonoBehaviour
     public void HomeScreenButton()
     {
         SceneManager.LoadScene("HomeScreen");
+    }
+
+    public void UpdateWordPreview()
+    {
+        if (Time.time < nextUpdateTime) return;
+        nextUpdateTime = Time.time + 0.1f;
+    
+        var cards = playArea.GetPlayedCardsInOrder();
+
+        if (cards.Count == 0)
+        {
+            wordCreated = "";
+            basePoint = 0;
+            baseMult = 0;
+            UpdateUI("Susun kartu untuk membentuk kata.");
+            return;
+        }
+
+        // bentuk kata sementara
+        string word = string.Concat(cards.Select(c => c.Model.text));
+
+        bool isWord = WordValidator.Instance != null && WordValidator.Instance.IsValid(word);
+
+        int n = cards.Count;
+        int baseForm = 0;
+        int mult = 1;
+
+        if (!isWord)
+        {
+            n = 1;
+        }
+
+        switch (n)
+        {
+            case 1: baseForm = 10; mult = 1; break;
+            case 2: baseForm = 20; mult = 2; break;
+            case 3: baseForm = 40; mult = 3; break;
+            case 4: baseForm = 60; mult = 4; break;
+            case 5: baseForm = 80; mult = 5; break;
+        }
+
+        wordCreated = isWord ? word : "Bukan Kata";
+        basePoint = baseForm;
+        baseMult = mult;
+
+        string msg = isWord ? $"Preview: {word} (x{mult})" : $"{word} bukan kata valid.";
+        UpdateUI(msg);
     }
 }
