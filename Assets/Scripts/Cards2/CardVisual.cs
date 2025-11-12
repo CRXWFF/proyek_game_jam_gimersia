@@ -91,14 +91,6 @@ public class CardVisual : MonoBehaviour
         initalize = true;
     }
 
-    public void SetVisual(CardData data)
-    {
-        if (data == null) return;
-
-        if (cardImage != null)
-            cardImage.sprite = data.sprite;
-    }
-
     public void UpdateIndex(int length)
     {
         transform.SetSiblingIndex(parentCard.transform.parent.GetSiblingIndex());
@@ -217,9 +209,9 @@ public class CardVisual : MonoBehaviour
 
     private void PointerDown(Card card)
     {
-        if (scaleAnimations)
+        if(scaleAnimations)
             transform.DOScale(scaleOnSelect, scaleTransition).SetEase(scaleEase);
-
+            
         visualShadow.localPosition += (-Vector3.up * shadowOffset);
         shadowCanvas.overrideSorting = false;
     }

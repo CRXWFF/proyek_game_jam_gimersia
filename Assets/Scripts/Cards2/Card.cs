@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -41,9 +40,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
     [HideInInspector] public UnityEvent<Card> EndDragEvent;
     [HideInInspector] public UnityEvent<Card, bool> SelectEvent;
 
-    [Header("Data Kartu")]
-    public CardData cardData;
-
+    [System.Obsolete]
     void Start()
     {
         canvas = GetComponentInParent<Canvas>();
@@ -51,6 +48,10 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
         if (!instantiateVisual)
             return;
+
+        visualHandler = FindObjectOfType<VisualCardsHandler>();
+        cardVisual = Instantiate(cardVisualPrefab, visualHandler ? visualHandler.transform : canvas.transform).GetComponent<CardVisual>();
+        cardVisual.Initialize(this);
     }
 
     void Update()
@@ -66,46 +67,6 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
         }
     }
 
-    public void Initialize(CardData data)
-    {
-        cardData = data;
-        name = data.sukuKata;
-
-        Debug.Log($"[Card.Init] {data.sukuKata} mulai diinisialisasi, prefab visual = {cardVisualPrefab}");
-
-        if (cardVisual == null)
-        {
-            if (cardVisualPrefab == null)
-            {
-                Debug.LogError($"{name}: CardVisualPrefab belum di-assign di Inspector!");
-                return;
-            }
-
-            if (visualHandler == null)
-                visualHandler = FindFirstObjectByType<VisualCardsHandler>();
-
-            Transform parent = visualHandler ? visualHandler.transform : GetComponentInParent<Canvas>().transform;
-
-            cardVisual = Instantiate(cardVisualPrefab, parent).GetComponent<CardVisual>();
-            cardVisual.Initialize(this);
-        }
-
-        // 🔹 Set sprite kartu
-        Transform spriteTransform = cardVisual.transform.Find("ShakeParent/TiltParent/Sprite");
-        if (spriteTransform != null)
-        {
-            Image img = spriteTransform.GetComponent<Image>();
-            if (img != null && data.sprite != null)
-                img.sprite = data.sprite;
-            else
-                Debug.LogWarning($"{name}: CardData belum memiliki sprite!");
-        }
-        else
-        {
-            Debug.LogError($"{name}: Tidak menemukan ShakeParent/TiltParent/Sprite di prefab CardVisual!");
-        }
-    }
-
     void ClampPosition()
     {
         Vector2 screenBounds = Camera.main.ScreenToWorldPoint(new Vector3(Screen.width, Screen.height, Camera.main.transform.position.z));
@@ -115,26 +76,21 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
         transform.position = new Vector3(clampedPosition.x, clampedPosition.y, 0);
     }
 
-    // ========================================================
-    // ===============   DRAG & DROP SECTION   ================
-    // ========================================================    
-
     public void OnBeginDrag(PointerEventData eventData)
     {
         BeginDragEvent.Invoke(this);
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         offset = mousePosition - (Vector2)transform.position;
-
+        isDragging = true;
         canvas.GetComponent<GraphicRaycaster>().enabled = false;
         imageComponent.raycastTarget = false;
 
-        isDragging = true;
         wasDragged = true;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        
+
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -152,10 +108,6 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
             wasDragged = false;
         }
     }
-
-    // ========================================================
-    // ===============   POINTER EVENTS   =====================
-    // ========================================================
 
     public void OnPointerEnter(PointerEventData eventData)
     {
@@ -233,7 +185,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     private void OnDestroy()
     {
-        if(cardVisual != null)
-        Destroy(cardVisual.gameObject);
+        if (cardVisual != null)
+            Destroy(cardVisual.gameObject);
     }
 }

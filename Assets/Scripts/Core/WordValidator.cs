@@ -29,11 +29,11 @@ public class WordValidator : MonoBehaviour
         "LARA","LIMA","LUKA","LUPA","MAKAN","MALA","MALAH","MAMA","MANA","MARAH","MASA","MATA",
         "MAU","NADA","NAGA","NAMA","NASI","NILA","NYALA","NYATA","OLAH","PADA","PALA","PAPA",
         "PARA","PARAH","RAGA","RANDA","RASA","RATU","RUSA","SALAH","SAMA","SANA","SAPA","SARA",
-        "SATU","SILA","SINI","SISA","SISI","SUKA","SUSU","TALI","TAMAN","TUA","TULI","URUS", "SARAN", "KEPAL", "GALI",
+        "SATU","SILA","SINI","SISA","SISI","SUKA","SUSU","TALI","TAMAN","TUA","TULI","URUS",
 
         // 3-syllable
         "KELAPA","KEPALA","MAKALAH","MASAKAN","MASUKAN","PASARAN","PASUKAN","RASAKAN","SALAMAN",
-        "SALURAN","SARANA","SUARA","UDARA", "KEPALAN", "GALIAN", "DALAMAN",
+        "SALURAN","SARANA","SUARA","UDARA",
 
         // 4-syllable
         "KEPADANYA","SAMASAMA",
