@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d44e1b927c2462469cfc3397013604a, type: 3}
+  m_Name: I
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  sprite: {fileID: 21300000, guid: dc86035c19f04ca47a4f9a017c1d5382, type: 3}
+  sukuKata: I
+  type: 0
+  basePoint: 2
+  specialEffectDescription: 
