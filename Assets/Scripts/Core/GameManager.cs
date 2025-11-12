@@ -38,6 +38,9 @@ public class GameManager : MonoBehaviour
     public TMP_Text CoinText;
     [Header("Game Over")]
     public GameObject gameOverPopup;
+    [Header("Round")]
+    public int rounds = 1;
+    public TMP_Text RoundsText;
 
     int lastGain = 0;
     int playerCoins = 0;
@@ -99,6 +102,35 @@ public class GameManager : MonoBehaviour
         if (gameOverPopup != null)
             gameOverPopup.SetActive(false);
 
+        if (overlay != null)
+            overlay.SetActive(false);
+    }
+
+    // Start the next round: close shop, increment rounds, reset current score to 0,
+    // increase target by previous score, but do NOT change coins or purchased specials.
+    public void StartNextRound()
+    {
+        // close shop if open
+        if (ShopManager.Instance != null)
+            ShopManager.Instance.CloseShop();
+
+        int previousScore = currentScore;
+
+        // increment round counter
+        rounds += 1;
+        if (RoundsText != null)
+            RoundsText.text = rounds.ToString();
+
+        // increase target by previous score
+        targetScore += previousScore;
+
+        // reset current score to zero
+        currentScore = 0;
+
+        // update UI to reflect new round and scores
+        UpdateUI($"Round {rounds} dimulai.");
+
+        // hide overlay if visible
         if (overlay != null)
             overlay.SetActive(false);
     }
