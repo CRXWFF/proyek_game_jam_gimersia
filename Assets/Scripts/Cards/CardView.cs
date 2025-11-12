@@ -205,8 +205,8 @@ public class CardView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDrag
         transform.DOMove(slot.transform.position, 0.15f).SetEase(Ease.OutCubic);
         transform.localScale = Vector3.one;
 
-        if (GameManager.Instance != null)
-            GameManager.Instance.UpdateWordPreview();
-    
+        // if (GameManager.Instance != null)
+        //     GameManager.Instance.UpdateWordPreview();
+
     }
 }

@@ -26,6 +26,9 @@ public class HorizontalCardHolder : MonoBehaviour
     [SerializeField] private bool tweenCardReturn = true;
 
     bool isCrossing = false;
+    // Pending swap target (store the Card reference instead of an index to avoid stale index issues)
+    private int pendingSwapIndex = -1;
+    private Card pendingSwapCard = null;
     private List<Card> selectedCards = new List<Card>();
 
 
@@ -96,6 +99,9 @@ public class HorizontalCardHolder : MonoBehaviour
     private void BeginDrag(Card card)
     {
         selectedCard = card;
+        // clear any previous pending swap when starting a new drag
+        pendingSwapIndex = -1;
+        pendingSwapCard = null;
     }
 
 
@@ -104,7 +110,15 @@ public class HorizontalCardHolder : MonoBehaviour
         if (selectedCard == null)
             return;
 
-        selectedCard.transform.DOLocalMove(selectedCard.selected ? new Vector3(0,selectedCard.selectionOffset,0) : Vector3.zero, tweenCardReturn ? .15f : 0).SetEase(Ease.OutBack);
+        // If a swap was scheduled during dragging, perform it now (on release)
+        if (pendingSwapCard != null)
+        {
+            SwapCard(pendingSwapCard);
+            pendingSwapCard = null;
+            pendingSwapIndex = -1;
+        }
+
+        selectedCard.transform.DOLocalMove(selectedCard.selected ? new Vector3(0, selectedCard.selectionOffset, 0) : Vector3.zero, tweenCardReturn ? .15f : 0).SetEase(Ease.OutBack);
 
         rect.sizeDelta += Vector2.right;
         rect.sizeDelta -= Vector2.right;
@@ -152,49 +166,112 @@ public class HorizontalCardHolder : MonoBehaviour
         for (int i = 0; i < cards.Count; i++)
         {
 
-            if (selectedCard.transform.position.x > cards[i].transform.position.x)
+            // Determine slot parents for selected and current card
+            var selSlot = selectedCard.transform.parent;
+            var otherSlot = cards[i].transform.parent;
+
+            // Only consider swapping with cards that live under slot parents
+            if (selSlot == null || otherSlot == null) continue;
+            if (!selSlot.CompareTag("Slot") || !otherSlot.CompareTag("Slot")) continue;
+
+            // Require both slot parents to be direct children of THIS holder transform. This prevents
+            // accidental cross-container swaps (eg. assemble <-> hand) that can be triggered by
+            // reparenting during drop events or by other holders.
+            if (selSlot.parent != this.transform || otherSlot.parent != this.transform) continue;
+
+            int selIndex = selSlot.GetSiblingIndex();
+            int otherIndex = otherSlot.GetSiblingIndex();
+
+            // If the selected card moved right past another card that sits to its right, schedule a swap on release
+            if (selectedCard.transform.position.x > cards[i].transform.position.x && selIndex < otherIndex)
             {
-                if (selectedCard.ParentIndex() < cards[i].ParentIndex())
-                {
-                    Swap(i);
-                    break;
-                }
+                pendingSwapIndex = i;
+                pendingSwapCard = cards[i];
+                isCrossing = true; // prevent detecting further crossings until swap completes
+                break;
             }
 
-            if (selectedCard.transform.position.x < cards[i].transform.position.x)
+            // If the selected card moved left past another card that sits to its left, schedule a swap on release
+            if (selectedCard.transform.position.x < cards[i].transform.position.x && selIndex > otherIndex)
             {
-                if (selectedCard.ParentIndex() > cards[i].ParentIndex())
-                {
-                    Swap(i);
-                    break;
-                }
+                pendingSwapIndex = i;
+                pendingSwapCard = cards[i];
+                isCrossing = true; // prevent detecting further crossings until swap completes
+                break;
             }
         }
+    }
+
+    // Swap using direct Card reference to avoid index-out-of-range if the cards list changed while dragging
+    void SwapCard(Card targetCard)
+    {
+        if (targetCard == null)
+            return;
+
+        // Find current index of the target in our cards list - if not found, abort safely
+        int idx = cards.IndexOf(targetCard);
+        if (idx < 0 || idx >= cards.Count)
+            return;
+
+        // Delegate to existing Swap(int) logic for the actual operation
+        Swap(idx);
     }
 
     void Swap(int index)
     {
         isCrossing = true;
 
-        Transform focusedParent = selectedCard.transform.parent;
-        Transform crossedParent = cards[index].transform.parent;
+        Transform focusedParent = selectedCard != null ? selectedCard.transform.parent : null; // slot transform
+        Transform crossedParent = cards[index] != null ? cards[index].transform.parent : null; // slot transform
 
-        cards[index].transform.SetParent(focusedParent);
+        // Safety: ensure both slot parents are still direct children of this holder. If not, abort.
+        if (focusedParent == null || crossedParent == null) { isCrossing = false; pendingSwapCard = null; return; }
+        if (focusedParent.parent != this.transform || crossedParent.parent != this.transform) { isCrossing = false; pendingSwapCard = null; return; }
+
+        // Determine swap direction by comparing the slot parents' sibling indices when both are valid slot objects.
+        // This avoids relying on Card.ParentIndex() and uses the actual slot ordering.
+        bool swapIsRight = false;
+        if (focusedParent != null && crossedParent != null && focusedParent.CompareTag("Slot") && crossedParent.CompareTag("Slot"))
+        {
+            int focusedIdx = focusedParent.GetSiblingIndex();
+            int crossedIdx = crossedParent.GetSiblingIndex();
+            swapIsRight = crossedIdx > focusedIdx;
+        }
+        else
+        {
+            // Fallback: if slots are not available, try previous parent-index based comparison if possible
+            try
+            {
+                swapIsRight = cards[index].ParentIndex() > selectedCard.ParentIndex();
+            }
+            catch
+            {
+                swapIsRight = false;
+            }
+        }
+
+        // Swap parents so each card moves into the other's slot
+        cards[index].transform.SetParent(focusedParent, false);
         cards[index].transform.localPosition = cards[index].selected ? new Vector3(0, cards[index].selectionOffset, 0) : Vector3.zero;
-        selectedCard.transform.SetParent(crossedParent);
+        selectedCard.transform.SetParent(crossedParent, false);
+        selectedCard.transform.localPosition = selectedCard.selected ? new Vector3(0, selectedCard.selectionOffset, 0) : Vector3.zero;
+
+        // Refresh internal cards list to match scene order (important for future swaps)
+        cards = GetComponentsInChildren<Card>().ToList();
 
         isCrossing = false;
 
         if (cards[index].cardVisual == null)
             return;
 
-        bool swapIsRight = cards[index].ParentIndex() > selectedCard.ParentIndex();
+        // Use the swapIsRight computed above (based on slot sibling indices when available)
         cards[index].cardVisual.Swap(swapIsRight ? -1 : 1);
 
         //Updated Visual Indexes
         foreach (Card card in cards)
         {
-            card.cardVisual.UpdateIndex(transform.childCount);
+            if (card.cardVisual != null)
+                card.cardVisual.UpdateIndex(transform.childCount);
         }
     }
 
@@ -255,6 +332,29 @@ public class HorizontalCardHolder : MonoBehaviour
         // Animasi masuk halus
         newCard.transform.localScale = Vector3.zero;
         newCard.transform.DOScale(1f, discardAnimDuration).SetEase(Ease.OutBack);
+    }
+
+    // Remove a specific card from this holder's tracking (called when a card is moved out)
+    public void RemoveCard(Card c)
+    {
+        if (c == null) return;
+        if (cards.Contains(c)) cards.Remove(c);
+    }
+
+    // Add a card into this holder's tracking (called when a card is moved in)
+    public void AddCard(Card c)
+    {
+        if (c == null) return;
+        if (!cards.Contains(c))
+        {
+            cards.Add(c);
+            // ensure event listeners are present
+            c.PointerEnterEvent.AddListener(CardPointerEnter);
+            c.PointerExitEvent.AddListener(CardPointerExit);
+            c.BeginDragEvent.AddListener(BeginDrag);
+            c.EndDragEvent.AddListener(EndDrag);
+            c.SelectEvent.AddListener(OnCardSelected);
+        }
     }
 
     // ✅ Discard semua kartu yang sedang diseleksi

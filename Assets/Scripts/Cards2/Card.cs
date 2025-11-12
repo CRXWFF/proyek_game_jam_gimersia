@@ -125,8 +125,12 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
         Vector2 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         offset = mousePosition - (Vector2)transform.position;
 
-        canvas.GetComponent<GraphicRaycaster>().enabled = false;
-        imageComponent.raycastTarget = false;
+        // Disable raycasts only for this card so other UI (slots) still receive events.
+        var cg = GetComponent<CanvasGroup>();
+        if (cg != null)
+            cg.blocksRaycasts = false;
+        else
+            imageComponent.raycastTarget = false;
 
         isDragging = true;
         wasDragged = true;
@@ -134,15 +138,19 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     public void OnDrag(PointerEventData eventData)
     {
-        
+
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         EndDragEvent.Invoke(this);
         isDragging = false;
-        canvas.GetComponent<GraphicRaycaster>().enabled = true;
-        imageComponent.raycastTarget = true;
+
+        var cg = GetComponent<CanvasGroup>();
+        if (cg != null)
+            cg.blocksRaycasts = true;
+        else
+            imageComponent.raycastTarget = true;
 
         StartCoroutine(FrameWait());
 
@@ -223,7 +231,7 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     public int ParentIndex()
     {
-        return transform.parent.CompareTag("Slot") ? transform.parent.GetSiblingIndex() : 0;
+        return transform.parent.CompareTag("Slot") ? transform.parent.GetSiblingIndex() - 1 : 0;
     }
 
     public float NormalizedPosition()
@@ -233,7 +241,8 @@ public class Card : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHand
 
     private void OnDestroy()
     {
-        if(cardVisual != null)
-        Destroy(cardVisual.gameObject);
+        if (cardVisual != null)
+            Destroy(cardVisual.gameObject);
     }
+
 }

@@ -59,8 +59,8 @@ public class PlayAreaSlot : MonoBehaviour, IDropHandler
 
         card.AssignToSlot(this);
 
-        if (GameManager.Instance != null)
-            GameManager.Instance.UpdateWordPreview();
-    
+        // if (GameManager.Instance != null)
+        //     GameManager.Instance.UpdateWordPreview();
+
     }
 }

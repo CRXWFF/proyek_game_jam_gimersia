@@ -522,6 +522,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91a6246ea44e37f42aa041b01b0fc74e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AssembleManager
+  validWords: []
   assembleSlotsParent: {fileID: 1204122004}
   resultText: {fileID: 0}
 --- !u!114 &80603543
@@ -575,8 +576,8 @@ GameObject:
   - component: {fileID: 106987147}
   - component: {fileID: 106987146}
   m_Layer: 5
-  m_Name: CardSlot_2
-  m_TagString: Slot
+  m_Name: Slot2
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1307,8 +1308,8 @@ GameObject:
   - component: {fileID: 219419577}
   - component: {fileID: 219419576}
   m_Layer: 5
-  m_Name: CardSlot_4
-  m_TagString: Slot
+  m_Name: Slot4
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2849,8 +2850,8 @@ GameObject:
   - component: {fileID: 576869526}
   - component: {fileID: 576869525}
   m_Layer: 5
-  m_Name: CardSlot_1
-  m_TagString: Slot
+  m_Name: Slot1
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2937,8 +2938,8 @@ GameObject:
   - component: {fileID: 578868446}
   - component: {fileID: 578868445}
   m_Layer: 5
-  m_Name: CardSlot_5
-  m_TagString: Slot
+  m_Name: Slot5
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3204,8 +3205,8 @@ GameObject:
   - component: {fileID: 638956215}
   - component: {fileID: 638956214}
   m_Layer: 5
-  m_Name: CardSlot_3
-  m_TagString: Slot
+  m_Name: Slot3
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -5936,6 +5937,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 91a6246ea44e37f42aa041b01b0fc74e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AssembleManager
+  validWords: []
   assembleSlotsParent: {fileID: 1204122004}
   resultText: {fileID: 0}
 --- !u!1 &1208579278
@@ -6896,10 +6898,8 @@ RectTransform:
   - {fileID: 222850844}
   - {fileID: 405451822}
   - {fileID: 2045752501}
-  - {fileID: 589683497}
   - {fileID: 80603541}
-  - {fileID: 18797329}
-  - {fileID: 1924985695}
+  - {fileID: 589683497}
   - {fileID: 1738432615}
   - {fileID: 676230247}
   - {fileID: 1121441498}
@@ -6908,6 +6908,8 @@ RectTransform:
   - {fileID: 448348349}
   - {fileID: 1559264033}
   - {fileID: 1640994145}
+  - {fileID: 18797329}
+  - {fileID: 1924985695}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

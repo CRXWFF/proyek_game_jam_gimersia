@@ -342,35 +342,13 @@ public class GameManager : MonoBehaviour
         SceneManager.LoadScene("HomeScreen");
     }
 
-    public void UpdateWordPreview()
+    public void ProcessAssemble(List<Card> cards, string word)
     {
-        if (Time.time < nextUpdateTime) return;
-        nextUpdateTime = Time.time + 0.1f;
-
-        var cards = playArea.GetPlayedCardsInOrder();
-
-        if (cards.Count == 0)
-        {
-            wordCreated = "";
-            basePoint = 0;
-            baseMult = 0;
-            UpdateUI("Susun kartu untuk membentuk kata.");
-            return;
-        }
-
-        // bentuk kata sementara
-        string word = string.Concat(cards.Select(c => c.Model.text));
-
-        bool isWord = WordValidator.Instance != null && WordValidator.Instance.IsValid(word);
+        int cardPoints = cards.Sum(c => c.cardData.basePoint);
 
         int n = cards.Count;
         int baseForm = 0;
         int mult = 1;
-
-        if (!isWord)
-        {
-            n = 1;
-        }
 
         switch (n)
         {
@@ -381,11 +359,34 @@ public class GameManager : MonoBehaviour
             case 5: baseForm = 80; mult = 5; break;
         }
 
-        wordCreated = isWord ? word : "Bukan Kata";
-        basePoint = baseForm;
-        baseMult = mult;
+        int combo = baseForm * mult;
+        int gain = cardPoints + combo;
 
-        string msg = isWord ? $"Preview: {word} (x{mult})" : $"{word} bukan kata valid.";
+        int powerMult = 1;
+        if (SpecialAreaManager.Instance != null)
+        {
+            powerMult = SpecialAreaManager.Instance.TryConsumeMultiplierForCount(n);
+        }
+
+        gain = gain * powerMult;
+        currentScore += gain;
+        lastGain = gain;
+        assembleLeft -= 1;
+
+        // Note: AssembleManager handles card replacement differently, skipping handManager.ReplacePlayedCards
+
+        string msg = $"{word} adalah kata! Kartu: {cardPoints} + Kombo: {baseForm} x{mult}";
+        if (powerMult != 1) msg += $" + Power x{powerMult}";
+        msg += $" = {gain}\nTotal Score: {currentScore}";
+
+        if (currentScore >= targetScore)
+        {
+            msg += "\nTarget tercapai!";
+            ShowResultPopup();
+        }
+
         UpdateUI(msg);
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 }

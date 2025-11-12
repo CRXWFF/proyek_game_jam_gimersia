@@ -1,15 +1,16 @@
 using UnityEngine;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using System.Linq;
 
 public class AssembleManager : MonoBehaviour
 {
-    [SerializeField] private List<string> validWords;
     [SerializeField] private Transform assembleSlotsParent;
     [SerializeField] private Text resultText;
 
     public void CheckWord()
     {
+        List<Card> cards = new List<Card>();
         string formedWord = "";
 
         foreach (Transform slot in assembleSlotsParent)
@@ -18,13 +19,30 @@ public class AssembleManager : MonoBehaviour
             {
                 Card card = slot.GetChild(0).GetComponent<Card>();
                 if (card != null && card.cardData != null)
+                {
+                    cards.Add(card);
                     formedWord += card.cardData.sukuKata;
+                }
             }
         }
 
-        if (validWords.Contains(formedWord))
+        bool isValid = WordValidator.Instance != null && WordValidator.Instance.IsValid(formedWord);
+
+        if (isValid)
         {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.ProcessAssemble(cards, formedWord);
+            }
             resultText.text = $"✅ '{formedWord}' adalah kata valid!";
+            // Clear slots after successful assemble
+            foreach (Transform slot in assembleSlotsParent)
+            {
+                if (slot.childCount > 0)
+                {
+                    Destroy(slot.GetChild(0).gameObject);
+                }
+            }
         }
         else
         {
